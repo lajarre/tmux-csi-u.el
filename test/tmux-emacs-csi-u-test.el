@@ -569,6 +569,16 @@
       (should (file-exists-p absolute-path))
       (should (file-executable-p absolute-path)))))
 
+(ert-deftest tmux-emacs-csi-u-test-qa-smoke-enforces-clean-canonical-report ()
+  (tmux-emacs-csi-u-test--assert-repo-file-contains
+   "script/qa-smoke"
+   '("wait_for_condition"
+     "Emacs daemon"
+     "tmux session"
+     "qa result file"
+     "':status already-enabled'"
+     "':preserved-conflicts 0'")))
+
 (ert-deftest tmux-emacs-csi-u-test-lefthook-wires-authoritative-commands ()
   (let ((contents (tmux-emacs-csi-u-test--read-repo-file "lefthook.yml")))
     (dolist (snippet '("run: script/format"
@@ -1001,6 +1011,25 @@
           (should (zerop (plist-get override-report :preserved-conflicts)))
           (should (equal (lookup-key input-decode-map "\e[59;2u") [f13]))
           (should (equal override-report tmux-emacs-csi-u-last-report)))))))
+
+(ert-deftest tmux-emacs-csi-u-test-enable-removes-package-owned-binding-when-sequence-is-no-longer-claimed ()
+  (let ((input-decode-map (make-sparse-keymap))
+        (tmux-emacs-csi-u-last-report nil)
+        (tmux-emacs-csi-u-local-overrides '(("\e[1000;2u" . [f14])))
+        (sequence "\e[1000;2u"))
+    (cl-letf (((symbol-function 'tmux-emacs-csi-u--support-state)
+               (lambda (&optional _frame) '(:support-signal force-enable)))
+              ((symbol-function 'tmux-emacs-csi-u--warn-on-new-conflicts)
+               (lambda (&rest _args)
+                 (ert-fail "Unexpected conflict warning"))))
+      (let ((initial-report (tmux-emacs-csi-u-enable)))
+        (should (eq (plist-get initial-report :status) 'installed))
+        (should (equal (lookup-key input-decode-map sequence) [f14]))
+        (setq tmux-emacs-csi-u-local-overrides nil)
+        (let ((report (tmux-emacs-csi-u-enable)))
+          (should (eq (plist-get report :status) 'already-enabled))
+          (should (null (lookup-key input-decode-map sequence)))
+          (should (equal report tmux-emacs-csi-u-last-report)))))))
 
 (ert-deftest tmux-emacs-csi-u-test-enable-preserves-truly-external-binding-on-reenable ()
   (let ((input-decode-map (make-sparse-keymap))

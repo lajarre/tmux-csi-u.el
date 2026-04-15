@@ -15,6 +15,21 @@ result_file=$repo_root/.tmp/qa-result-${qa_id}.el
 
 mkdir -p "$repo_root/.tmp"
 
+wait_for_condition() {
+  local description=$1
+  local attempts=$2
+  shift 2
+  local i
+  for ((i = 0; i < attempts; i += 1)); do
+    if "$@"; then
+      return 0
+    fi
+    sleep 0.2
+  done
+  printf 'qa smoke timeout waiting for %s\n' "$description" >&2
+  exit 1
+}
+
 cat > "$init_file" <<EOF
 (add-to-list 'load-path "$repo_root")
 (require 'cl-lib)
@@ -23,7 +38,8 @@ cat > "$init_file" <<EOF
 EOF
 
 "$emacs_bin" --daemon="$server" --quick --load "$init_file" >/dev/null 2>&1
-sleep 1
+wait_for_condition "Emacs daemon" 50 \
+  "$emacsclient_bin" -s "$server" -e t
 
 cleanup() {
   "$emacsclient_bin" -s "$server" -e '(kill-emacs)' >/dev/null 2>&1 || true
@@ -33,8 +49,8 @@ trap cleanup EXIT
 
 "$tmux_bin" -S "$socket" -f /dev/null new-session -d -s "$session" \
   "TERM=tmux-256color $emacsclient_bin -s $server -t -a '' --eval \"(let ((result-file \\\"$result_file\\\")) (with-temp-file result-file (prin1 (list :supported (tmux-emacs-csi-u-supported-p) :report (tmux-emacs-csi-u-enable) :keys (cl-loop repeat 13 collect (key-description (read-key-sequence-vector \\\"\\\")))) (current-buffer))) (save-buffers-kill-terminal))\""
-
-sleep 2
+wait_for_condition "tmux session" 50 \
+  "$tmux_bin" -S "$socket" has-session -t "$session"
 
 for seq in \
   $'\e[32;2u' \
@@ -55,7 +71,7 @@ do
   sleep 0.2
 done
 
-sleep 2
+wait_for_condition "qa result file" 50 test -f "$result_file"
 
 printf 'qa smoke command path:\n'
 printf '  daemon: %s --daemon=%q --quick --load %q\n' "$emacs_bin" "$server" "$init_file"
@@ -69,7 +85,9 @@ from pathlib import Path
 text = Path(r"$result_file").read_text()
 needles = [
     ':supported t',
+    ':status already-enabled',
     ':support-signal tty-type',
+    ':preserved-conflicts 0',
     '"SPC"',
     '"DEL"',
     '":"',

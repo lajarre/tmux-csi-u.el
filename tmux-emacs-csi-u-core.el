@@ -182,7 +182,22 @@ Return a report plist matching the public enable schema."
             (push (tmux-emacs-csi-u-core--conflict sequence existing candidate)
                   conflicts)
             (tmux-emacs-csi-u-core--forget-owned-binding
-             owned-bindings sequence))))))
+             owned-bindings sequence)))))
+      (when owned-bindings
+        (let (orphans)
+          (maphash (lambda (sequence owned)
+                     (unless (assoc sequence table)
+                       (push (cons sequence owned) orphans)))
+                   owned-bindings)
+          (dolist (orphan orphans)
+            (let* ((sequence (car orphan))
+                   (owned (cdr orphan))
+                   (existing (tmux-emacs-csi-u-core--lookup-exact-binding
+                              keymap sequence)))
+              (when (and existing
+                         (tmux-emacs-csi-u-core--binding-match-p existing owned))
+                (define-key keymap sequence nil))
+              (tmux-emacs-csi-u-core--forget-owned-binding owned-bindings sequence))))))
     (let ((unsupported-or-skipped (if (eq support-signal 'unsupported)
                                       candidate-count
                                     0)))

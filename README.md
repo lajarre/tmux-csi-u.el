@@ -44,7 +44,7 @@ Manual enable is available too:
 - `tmux-emacs-csi-u-supported-p` — return non-nil when the current frame looks like a supported tmux TTY context
 - `tmux-emacs-csi-u-describe` — return the latest report plist; interactively, render a human summary buffer
 - `tmux-emacs-csi-u-force-enable` — explicit opt-in for daemon/client edge cases
-- `tmux-emacs-csi-u-local-overrides` — local mappings applied after package defaults
+- `tmux-emacs-csi-u-local-overrides` — local mappings applied after package defaults; removing an override and re-enabling restores package defaults, or withdraws a package-owned mapping when that sequence is no longer claimed at all and nothing external has taken it over
 
 ## migration from ad hoc bindings
 
@@ -122,7 +122,7 @@ That helper starts an isolated daemon outside tmux with `--quick --load .tmp/qa-
 | --- | --- | --- | --- |
 | tty client attach | `script/qa-smoke` | tty client opens against the isolated daemon and exits cleanly | pass 2026-04-15 via `script/qa-smoke` |
 | support detection | `script/qa-smoke` | result includes `:supported t` | pass 2026-04-15 via `script/qa-smoke` |
-| support report | `script/qa-smoke` then `M-x tmux-emacs-csi-u-describe RET` in a normal tty client | smoke output includes `:support-signal tty-type`; interactive command renders the human report buffer | pass 2026-04-15 for `tty-type` detection via `script/qa-smoke`; rerun the interactive describe buffer during review |
+| support report | `script/qa-smoke` then `M-x tmux-emacs-csi-u-describe RET` in a normal tty client | smoke output includes `:status already-enabled`, `:support-signal tty-type`, and `:preserved-conflicts 0`; interactive command renders the human report buffer | pass 2026-04-16 for clean report via `script/qa-smoke`; rerun the interactive describe buffer during review |
 | Evil ex prompt | `emacsclient -t -a ''` in tmux, then type `:` in normal state | ex prompt opens; no recursive-edit or minibuffer wedge | reviewer step in the real Evil stack |
 | shifted space / backspace | `script/qa-smoke` | result includes `"SPC"` and `"DEL"`; no trailing literal `u` | pass 2026-04-15 via `script/qa-smoke` |
 | shifted punctuation | `script/qa-smoke` plus `test/fixture/punctuation.json` | exact characters arrive; no raw escape debris | pass 2026-04-15 via `script/qa-smoke`; fixture captured with `cat -v` on Ghostty 1.3.1 / tmux 3.6a / GNU Emacs 30.2 / ABC |
