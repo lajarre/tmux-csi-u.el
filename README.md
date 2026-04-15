@@ -104,7 +104,7 @@ The generated printable baseline in `test/fixture/generated-matrix.json` covers 
 
 ## manual verification matrix
 
-Use a long-lived daemon started outside the current tmux client. Repo-local smoke helper:
+Use a long-lived daemon started outside the current tmux client. Repo-local smoke helper (requires `python3` locally):
 
 ```bash
 script/qa-smoke

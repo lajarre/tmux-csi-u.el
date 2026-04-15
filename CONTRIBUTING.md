@@ -10,6 +10,7 @@ Keep changes tied to the tmux `CSI-u` problem. Avoid drive-by feature growth.
 
 - Emacs with batch mode available as `emacs`
 - tmux available for manual repro work
+- python3 available for `script/qa-smoke`
 - run `script/bootstrap-package-lint` once on a new machine to populate the repo-local ELPA dir
 
 ## required commands
