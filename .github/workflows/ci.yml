@@ -1,0 +1,22 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - review/**
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: install emacs and tmux
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y emacs-nox tmux
+      - name: bootstrap package-lint
+        run: script/bootstrap-package-lint
+      - name: run repo gate
+        run: script/check

@@ -9,9 +9,7 @@ Record stable repo facts here first.
 - user install, migration, troubleshooting, manual verification matrix: `README.md`
 - protocol shape, modifier model, skip lists, references: `doc/ref/protocol.md`
 - machine-readable mapping contracts: `test/fixture/generated-matrix.json`, `test/fixture/punctuation.json`
-- contributor workflow and OSS floor: `CONTRIBUTING.md`, `.github/`
-
-After repo-local truth holds up over time, promote cross-repo terminal conclusions to `~/workspace/infra/doc/faq/terminal.md`.
+- release and CI metadata: `.github/release.yml`, `.github/workflows/ci.yml`
 
 ## collision policy
 

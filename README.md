@@ -78,7 +78,7 @@ Policy: warn-and-preserve.
 - protocol notes and limits: `doc/ref/protocol.md`
 - printable baseline contract: `test/fixture/generated-matrix.json`
 - punctuation capture contract: `test/fixture/punctuation.json`
-- maintainer workflow notes: `AGENTS.md`, `CONTRIBUTING.md`, `.github/`
+- maintainer workflow notes: `AGENTS.md`, `.github/release.yml`, `.github/workflows/ci.yml`
 
 ## nested repo isolation
 

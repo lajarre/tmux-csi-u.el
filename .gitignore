@@ -1,6 +1,1 @@
 *.elc
-.tmp/
-.pi/
-.DS_Store
-test_keys.sh
-test_tmux_csiu.py
