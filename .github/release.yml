@@ -1,0 +1,26 @@
+changelog:
+  exclude:
+    labels:
+      - skip-changelog
+  categories:
+    - title: features
+      labels:
+        - feature
+    - title: fixes
+      labels:
+        - bug
+        - fix
+    - title: docs
+      labels:
+        - docs
+    - title: testing
+      labels:
+        - test
+        - testing
+    - title: maintenance
+      labels:
+        - chore
+        - maintenance
+    - title: other
+      labels:
+        - "*"
