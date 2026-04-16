@@ -120,12 +120,19 @@ Use SUPPORT-SIGNAL, INSTALLED, CONFLICTS, and UNSUPPORTED."
                tmux-emacs-csi-u-core--missing-owned-binding)
     tmux-emacs-csi-u-core--missing-owned-binding))
 
+(defun tmux-emacs-csi-u-core--owned-binding-instance-p (existing owned)
+  "Return non-nil when EXISTING is still the exact package-installed OWNED binding.
+This is intentionally conservative: only object identity counts as proof
+that the package still owns the current binding."
+  (and (not (eq owned tmux-emacs-csi-u-core--missing-owned-binding))
+       (or (stringp owned) (vectorp owned) (consp owned))
+       (eq existing owned)))
+
 (defun tmux-emacs-csi-u-core--record-owned-binding (owned-bindings sequence binding)
-  "Record BINDING as package-owned for SEQUENCE in OWNED-BINDINGS."
+  "Record BINDING as the exact package-owned binding.
+Store it for SEQUENCE in OWNED-BINDINGS."
   (when owned-bindings
-    (puthash sequence
-             (tmux-emacs-csi-u-data--copy-binding binding)
-             owned-bindings)))
+    (puthash sequence binding owned-bindings)))
 
 (defun tmux-emacs-csi-u-core--forget-owned-binding (owned-bindings sequence)
   "Forget any package-owned binding for SEQUENCE in OWNED-BINDINGS."
@@ -168,11 +175,13 @@ Return a report plist matching the public enable schema."
            ((tmux-emacs-csi-u-core--binding-match-p existing candidate)
             (setq already-matching (1+ already-matching))
             (when (and (not (eq owned tmux-emacs-csi-u-core--missing-owned-binding))
-                       (not (tmux-emacs-csi-u-core--binding-match-p existing owned)))
+                       (not (tmux-emacs-csi-u-core--owned-binding-instance-p
+                             existing owned)))
               (tmux-emacs-csi-u-core--forget-owned-binding
                owned-bindings sequence)))
            ((and (not (eq owned tmux-emacs-csi-u-core--missing-owned-binding))
-                 (tmux-emacs-csi-u-core--binding-match-p existing owned))
+                 (tmux-emacs-csi-u-core--owned-binding-instance-p
+                  existing owned))
             (define-key keymap sequence candidate)
             (setq installed (1+ installed))
             (tmux-emacs-csi-u-core--record-owned-binding
@@ -194,8 +203,8 @@ Return a report plist matching the public enable schema."
                    (owned (cdr orphan))
                    (existing (tmux-emacs-csi-u-core--lookup-exact-binding
                               keymap sequence)))
-              (when (and existing
-                         (tmux-emacs-csi-u-core--binding-match-p existing owned))
+              (when (tmux-emacs-csi-u-core--owned-binding-instance-p
+                     existing owned)
                 (define-key keymap sequence nil))
               (tmux-emacs-csi-u-core--forget-owned-binding owned-bindings sequence))))))
     (let ((unsupported-or-skipped (if (eq support-signal 'unsupported)
