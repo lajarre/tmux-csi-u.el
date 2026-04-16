@@ -21,7 +21,7 @@ wait_for_condition() {
   shift 2
   local i
   for ((i = 0; i < attempts; i += 1)); do
-    if "$@"; then
+    if "$@" >/dev/null 2>&1; then
       return 0
     fi
     sleep 0.2

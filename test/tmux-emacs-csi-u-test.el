@@ -573,6 +573,7 @@
   (tmux-emacs-csi-u-test--assert-repo-file-contains
    "script/qa-smoke"
    '("wait_for_condition"
+     ">/dev/null 2>&1"
      "Emacs daemon"
      "tmux session"
      "qa result file"
@@ -592,6 +593,7 @@
    '("# tmux-emacs-csi-u"
      "tmux stays on `csi-u`"
      "delta over Emacs native tmux/xterm decode"
+     "path/to/tmux-emacs-csi-u"
      "(require 'tmux-emacs-csi-u)"
      "Delete the ad hoc `input-decode-map` entries"
      "derived from `test/fixture/punctuation.json` (`;2`, `;4`, `;6`, `;8`"
@@ -625,10 +627,14 @@
      "README.md"
      "non-goals")))
 
-(ert-deftest tmux-emacs-csi-u-test-minimal-maintainer-files-exist ()
+(ert-deftest tmux-emacs-csi-u-test-maintainer-floor-community-files-exist ()
   (dolist (path '("LICENSE"
                   ".github/release.yml"
-                  ".github/workflows/ci.yml"))
+                  ".github/workflows/ci.yml"
+                  ".github/ISSUE_TEMPLATE/bug_report.yml"
+                  ".github/ISSUE_TEMPLATE/feature_request.yml"
+                  ".github/ISSUE_TEMPLATE/conduct-report.md"
+                  ".github/pull_request_template.md"))
     (should (file-exists-p (expand-file-name path tmux-emacs-csi-u-test--root-dir))))
   (tmux-emacs-csi-u-test--assert-repo-file-contains
    "LICENSE"
@@ -641,16 +647,28 @@
      "title: testing"))
   (tmux-emacs-csi-u-test--assert-repo-file-contains
    ".github/workflows/ci.yml"
-   '("script/bootstrap-package-lint"
-     "script/check"))
-  (dolist (path '("CONTRIBUTING.md"
-                  "CODE_OF_CONDUCT.md"
-                  ".github/CODEOWNERS"
-                  ".github/ISSUE_TEMPLATE/bug_report.yml"
-                  ".github/ISSUE_TEMPLATE/feature_request.yml"
-                  ".github/ISSUE_TEMPLATE/conduct-report.md"
-                  ".github/pull_request_template.md"))
-    (should-not (file-exists-p (expand-file-name path tmux-emacs-csi-u-test--root-dir)))))
+   '("name: ci"
+     "script/bootstrap-package-lint"
+     "script/check"
+     "emacs-nox tmux"))
+  (tmux-emacs-csi-u-test--assert-repo-file-contains
+   ".github/ISSUE_TEMPLATE/bug_report.yml"
+   '("name: bug report"
+     "script/check"
+     "daemon-started `emacsclient -t` frame"))
+  (tmux-emacs-csi-u-test--assert-repo-file-contains
+   ".github/ISSUE_TEMPLATE/feature_request.yml"
+   '("name: feature request"))
+  (tmux-emacs-csi-u-test--assert-repo-file-contains
+   ".github/ISSUE_TEMPLATE/conduct-report.md"
+   '("about: code of conduct report"
+     "lajarre@proton.me"))
+  (tmux-emacs-csi-u-test--assert-repo-file-contains
+   ".github/pull_request_template.md"
+   '("script/check"
+     "script/qa-smoke"
+     "repro steps included"
+     "manual verification rerun")))
 
 (ert-deftest tmux-emacs-csi-u-test-candidate-table-applies-local-overrides ()
   (let* ((overrides '(("\e[59;2u" . [f13])
