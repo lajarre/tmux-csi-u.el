@@ -2,7 +2,20 @@
 
 ;;; Commentary:
 
-;; Mapping data and candidate-table composition for tmux-csi-u.
+;; Canonical mapping data for the `tmux-csi-u' package: the tmux CSI-u
+;; modifier model, the generated printable ASCII baseline for keycodes
+;; 32..126 across modifiers 2..8, the documented skip list for pairs
+;; that Emacs decodes natively or that `kbd' folds to an existing
+;; event, the explicit special-key overrides (space, return, tab,
+;; backspace, escape), and the locally captured shifted punctuation
+;; family from `test/fixture/punctuation.json'.
+;;
+;; `tmux-csi-u-data-build-candidate-table' composes the final
+;; candidate table in priority order: generated printable baseline,
+;; special-key overrides, then user local overrides.
+;;
+;; This file is not a public entrypoint; callers should use
+;; `tmux-csi-u' instead.
 
 ;;; Code:
 

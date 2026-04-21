@@ -2,7 +2,13 @@
 
 ;;; Commentary:
 
-;; Low-level helpers for the tmux-csi-u package.
+;; Internal helpers shared by the public `tmux-csi-u' API.  Provides
+;; the candidate-table installer, `input-decode-map' lookup helpers,
+;; package-owned binding tracking, conflict record construction, and
+;; human-readable formatting for the enable report.
+;;
+;; This file is not a public entrypoint; callers should use
+;; `tmux-csi-u' instead.
 
 ;;; Code:
 
