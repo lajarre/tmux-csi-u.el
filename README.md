@@ -40,8 +40,6 @@ Manual enable is available too:
 (tmux-csi-u-enable)
 ```
 
-Legacy compatibility shims stay available for transition: `require 'tmux-emacs-csi-u` and the old `tmux-emacs-csi-u*` symbols continue to work, but the primary package/file/prefix is now `tmux-csi-u`.
-
 ## public entrypoints
 
 - `tmux-csi-u-enable` — install candidate mappings for the current TTY terminal and return a report plist
