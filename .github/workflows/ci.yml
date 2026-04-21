@@ -7,16 +7,29 @@ on:
       - main
       - fix/**
       - review/**
+      - refactor/**
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        emacs_version:
+          - '25.1'
+          - '29.4'
+          - '30.2'
+    name: emacs ${{ matrix.emacs_version }}
     steps:
       - uses: actions/checkout@v4
-      - name: install emacs and tmux
+      - name: install emacs
+        uses: purcell/setup-emacs@master
+        with:
+          version: ${{ matrix.emacs_version }}
+      - name: install tmux
         run: |
           sudo apt-get update
-          sudo apt-get install -y emacs-nox tmux
+          sudo apt-get install -y tmux
       - name: bootstrap package-lint
         run: script/bootstrap-package-lint
       - name: run repo gate
