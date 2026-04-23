@@ -144,7 +144,7 @@ candidate before installation."
   (not (eq (tmux-csi-u--support-signal frame) 'unsupported)))
 
 (defun tmux-csi-u--warn-on-new-conflicts (frame conflicts)
-  "Warn once per live terminal for CONFLICTS on FRAME."
+  "Warn once on FRAME's live terminal for any new CONFLICTS."
   (let* ((terminal (frame-terminal frame))
          (param 'tmux-csi-u--warned-conflicts)
          (seen (copy-sequence (or (terminal-parameter terminal param) '())))
@@ -182,7 +182,7 @@ candidate before installation."
           owned-bindings))))
 
 (defun tmux-csi-u--annotate-report-with-support-state (report support-state)
-  "Remember SUPPORT-STATE for REPORT and return REPORT."
+  "Annotate REPORT with SUPPORT-STATE and return REPORT."
   (puthash report support-state tmux-csi-u--support-state-by-report)
   report)
 

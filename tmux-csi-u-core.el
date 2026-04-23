@@ -72,13 +72,13 @@
     (vconcat sequence [0])))
 
 (defun tmux-csi-u-core--exact-integer-binding-p (keymap sequence)
-  "Return non-nil when SEQUENCE has an exact integer binding in KEYMAP."
+  "Return non-nil when KEYMAP gives SEQUENCE an exact integer binding."
   (equal (lookup-key keymap
                      (tmux-csi-u-core--sequence-with-sentinel sequence))
          (length sequence)))
 
 (defun tmux-csi-u-core--lookup-exact-binding (keymap sequence)
-  "Return the exact binding for SEQUENCE in KEYMAP, or nil when absent."
+  "Return KEYMAP's exact binding for SEQUENCE, or nil when absent."
   (let ((binding (lookup-key keymap sequence)))
     (if (and (integerp binding)
              (not (tmux-csi-u-core--exact-integer-binding-p
@@ -87,7 +87,7 @@
       binding)))
 
 (defun tmux-csi-u-core--blocking-prefix-binding (keymap sequence)
-  "Return a non-prefix binding that blocks defining SEQUENCE in KEYMAP."
+  "Return KEYMAP's non-prefix binding that blocks defining SEQUENCE."
   (let ((index 1)
         blocking)
     (while (and (< index (length sequence)) (null blocking))
@@ -120,28 +120,28 @@ Use SUPPORT-SIGNAL, INSTALLED, CONFLICTS, and UNSUPPORTED."
   "Sentinel for absent package-owned bindings.")
 
 (defun tmux-csi-u-core--owned-binding (owned-bindings sequence)
-  "Return the package-owned binding for SEQUENCE from OWNED-BINDINGS."
+  "Return the OWNED-BINDINGS entry for SEQUENCE."
   (if owned-bindings
       (gethash sequence owned-bindings
                tmux-csi-u-core--missing-owned-binding)
     tmux-csi-u-core--missing-owned-binding))
 
 (defun tmux-csi-u-core--owned-binding-instance-p (existing owned)
-  "Return non-nil when EXISTING is still the exact package-installed OWNED binding.
-This is intentionally conservative: only object identity counts as proof
+  "Return non-nil when EXISTING is the package-installed OWNED binding.
+Intentionally conservative: only object identity counts as proof
 that the package still owns the current binding."
   (and (not (eq owned tmux-csi-u-core--missing-owned-binding))
        (or (stringp owned) (vectorp owned) (consp owned))
        (eq existing owned)))
 
 (defun tmux-csi-u-core--record-owned-binding (owned-bindings sequence binding)
-  "Record BINDING as the exact package-owned binding.
-Store it for SEQUENCE in OWNED-BINDINGS."
+  "Record in OWNED-BINDINGS that SEQUENCE maps to BINDING.
+This marks BINDING as the exact package-owned binding for SEQUENCE."
   (when owned-bindings
     (puthash sequence binding owned-bindings)))
 
 (defun tmux-csi-u-core--forget-owned-binding (owned-bindings sequence)
-  "Forget any package-owned binding for SEQUENCE in OWNED-BINDINGS."
+  "Forget OWNED-BINDINGS' package-owned binding for SEQUENCE, if any."
   (when owned-bindings
     (remhash sequence owned-bindings)))
 

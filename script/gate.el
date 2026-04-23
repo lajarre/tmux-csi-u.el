@@ -239,7 +239,7 @@ When CHECK-ONLY is non-nil, do not write the formatted contents."
   "Dynamic output dir used by `byte-compile-dest-file-function'.")
 
 (defun tmux-csi-u-script--compile-dest-file (filename)
-  "Return the byte-compile destination for FILENAME."
+  "Return the `byte-compile' destination for FILENAME."
   (let* ((relative (tmux-csi-u-script--relative-path filename))
          (destination (expand-file-name relative
                                         tmux-csi-u-script--compile-output-dir)))
