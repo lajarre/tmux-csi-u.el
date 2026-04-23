@@ -37,8 +37,9 @@
 ;; buffer.  User-local mappings applied after package defaults go in
 ;; `tmux-csi-u-local-overrides'.
 ;;
-;; See README.md for the full install, migration, and verification
-;; matrix, and `doc/ref/protocol.md' for the tmux CSI-u wire shape.
+;; See the project homepage (URL above) for the full install,
+;; migration, and verification matrix, and `doc/ref/protocol.md'
+;; on the homepage for the tmux CSI-u wire shape.
 
 ;;; Code:
 
