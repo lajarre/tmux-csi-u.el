@@ -190,6 +190,7 @@ candidate before installation."
 (defun tmux-csi-u-enable (&optional frame)
   "Install explicit CSI-u overrides for FRAME's terminal.
 Return the enable report plist."
+  (interactive)
   (let* ((frame (or frame (selected-frame)))
          (support-state (tmux-csi-u--support-state frame))
          (support-signal (plist-get support-state :support-signal))
