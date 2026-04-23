@@ -595,6 +595,7 @@
    '("# tmux-csi-u.el"
      "tmux stays on `csi-u`"
      "delta over Emacs native tmux/xterm decode"
+     "M-x package-install RET tmux-csi-u RET"
      "(require 'tmux-csi-u)"
      "Delete the ad hoc `input-decode-map` entries"
      "derived from `test/fixture/punctuation.json` (`;2`, `;4`, `;6`, `;8`"
@@ -602,10 +603,7 @@
      "\\e[58;6u"
      "\\e[13;4u"
      "tmux-csi-u-supported-p"
-     "script/qa-smoke"
-     "M-x tmux-csi-u-describe RET"
-     "git status --short"
-     "Pi"))
+     "warn-and-preserve"))
   (tmux-csi-u-test--assert-repo-file-contains
    "doc/ref/protocol.md"
    '("# protocol reference"
@@ -619,14 +617,7 @@
      "xterm.el decodes"
      "xterm.el collapses"
      "kbd normalizes"
-     "Bug #50699"))
-  (tmux-csi-u-test--assert-repo-file-contains
-   "AGENTS.md"
-   '("# AGENTS"
-     "warn-and-preserve"
-     "script/check"
-     "README.md"
-     "non-goals")))
+     "Bug #50699")))
 
 (ert-deftest tmux-csi-u-test-minimal-maintainer-files-exist ()
   (dolist (path '("LICENSE"
