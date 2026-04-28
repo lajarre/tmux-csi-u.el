@@ -4,7 +4,7 @@
 
 ;; Author: lajarre <1884912+lajarre@users.noreply.github.com>
 ;; Maintainer: lajarre <1884912+lajarre@users.noreply.github.com>
-;; Version: 0.1.2
+;; Version: 0.2.0
 ;; Package-Requires: ((emacs "27.1"))
 ;; Keywords: terminals, tools
 ;; URL: https://github.com/lajarre/tmux-csi-u.el
@@ -26,11 +26,15 @@
 ;; Usage:
 ;;
 ;;   (require 'tmux-csi-u)
+;;   (tmux-csi-u-mode 1)
 ;;
-;; `tmux-csi-u-auto-enable' defaults to t and installs via
-;; `tty-setup-hook' when the frame is a supported tmux TTY.  Manual
-;; activation is `M-x tmux-csi-u-enable'.  `M-x tmux-csi-u-describe'
-;; renders the latest enable report for debugging.
+;; The package loads pure: nothing happens until `tmux-csi-u-mode' is
+;; enabled.  The mode adds a `tty-setup-hook' entry and immediately
+;; enables every already-live supported tmux TTY frame.  `M-x
+;; tmux-csi-u-describe' renders the latest enable report for debugging.
+;; `M-x tmux-csi-u-disable' undoes the install on a single frame's
+;; terminal; `(tmux-csi-u-mode -1)' fully disables the mode and
+;; un-installs package-owned entries from every live terminal.
 ;;
 ;; Collision policy is warn-and-preserve: conflicting external bindings
 ;; stay in place and are surfaced via `display-warning' and the report
