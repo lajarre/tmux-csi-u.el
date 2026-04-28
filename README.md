@@ -26,12 +26,16 @@ Manual install from a clone:
 ```elisp
 (add-to-list 'load-path (expand-file-name "path/to/tmux-csi-u"))
 (require 'tmux-csi-u)
+(tmux-csi-u-mode 1)
 ```
 
-`tmux-csi-u-auto-enable` defaults to `t`; the package installs from `tty-setup-hook` for supported TTY frames. To enable explicitly:
+The package loads pure: nothing happens until `tmux-csi-u-mode` is enabled. The mode adds an entry to `tty-setup-hook` and immediately enables every already-live supported tmux TTY frame.
 
-```
-M-x tmux-csi-u-enable RET
+With `use-package`:
+
+```elisp
+(use-package tmux-csi-u
+  :config (tmux-csi-u-mode 1))
 ```
 
 Optional configuration:
@@ -47,7 +51,9 @@ Optional configuration:
 
 ## public entrypoints
 
+- `tmux-csi-u-mode` — global minor mode: installs the `tty-setup-hook` entry and enables every already-live supported TTY frame; disabling reverses both
 - `tmux-csi-u-enable` — install candidate mappings for the current TTY terminal and return a report plist
+- `tmux-csi-u-disable` — remove package-owned mappings from the current TTY terminal; preserves external bindings
 - `tmux-csi-u-supported-p` — return non-nil when the current frame looks like a supported tmux TTY context
 - `tmux-csi-u-describe` — return the latest report plist; interactively, render a human summary buffer
 - `tmux-csi-u-force-enable` — explicit opt-in for daemon/client edge cases
