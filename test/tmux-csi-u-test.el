@@ -139,10 +139,10 @@
 
 ;; Keep byte-compilation self-contained while runtime tests still load exact
 ;; source files below.
-(defvar tmux-csi-u-auto-enable)
 (defvar tmux-csi-u-force-enable)
 (defvar tmux-csi-u-last-report)
 (defvar tmux-csi-u-local-overrides)
+(defvar tmux-csi-u-mode)
 (defvar tmux-csi-u--owned-bindings-by-keymap)
 (defvar tmux-csi-u-core--missing-owned-binding)
 
@@ -170,15 +170,15 @@
 (declare-function tmux-csi-u-supported-p
                   "tmux-csi-u"
                   (&optional frame))
-(declare-function tmux-csi-u--set-auto-enable
-                  "tmux-csi-u"
-                  (symbol value))
-(declare-function tmux-csi-u--sync-tty-setup-hook
-                  "tmux-csi-u"
-                  (enabled))
 (declare-function tmux-csi-u--tty-setup-enable
                   "tmux-csi-u"
                   ())
+(declare-function tmux-csi-u-mode
+                  "tmux-csi-u"
+                  (&optional arg))
+(declare-function tmux-csi-u-disable
+                  "tmux-csi-u"
+                  (&optional frame))
 (declare-function tmux-csi-u--support-signal
                   "tmux-csi-u"
                   (&optional frame))
@@ -959,29 +959,240 @@
       (when-let ((buffer (get-buffer "*tmux-csi-u*")))
         (kill-buffer buffer)))))
 
-(ert-deftest tmux-csi-u-test-auto-enable-syncs-tty-setup-hook ()
+(ert-deftest tmux-csi-u-test-load-is-pure ()
+  (let ((source-dir
+         (file-name-directory (locate-library "tmux-csi-u"))))
+    (with-temp-buffer
+      (let ((exit (call-process
+                   (expand-file-name invocation-name invocation-directory)
+                   nil t nil
+                   "--batch" "-Q"
+                   "-L" source-dir
+                   "--eval"
+                   "(progn (require 'tmux-csi-u)
+                           (princ (format \"hook=%S\" tty-setup-hook)))")))
+        (should (zerop exit))
+        (let ((output (buffer-string)))
+          (should (string-match-p "hook=\\(nil\\|()\\)" output))
+          (should-not (string-match-p "tmux-csi-u--tty-setup-enable" output)))))))
+
+(ert-deftest tmux-csi-u-test-mode-toggle-manages-tty-setup-hook ()
   (let ((saved-hook tty-setup-hook)
-        (saved-value tmux-csi-u-auto-enable))
+        (saved-mode tmux-csi-u-mode))
     (unwind-protect
         (progn
-          (setq tty-setup-hook
-                '(user-hook-a tmux-csi-u--tty-setup-enable user-hook-b))
-          (tmux-csi-u--sync-tty-setup-hook nil)
-          (should (equal tty-setup-hook '(user-hook-a user-hook-b)))
-          (tmux-csi-u--set-auto-enable 'tmux-csi-u-auto-enable t)
-          (should (equal tty-setup-hook
-                         '(user-hook-a user-hook-b
-                                       tmux-csi-u--tty-setup-enable)))
-          (should (= (cl-count #'tmux-csi-u--tty-setup-enable tty-setup-hook) 1))
-          (tmux-csi-u--sync-tty-setup-hook t)
-          (should (equal tty-setup-hook
-                         '(user-hook-a user-hook-b
-                                       tmux-csi-u--tty-setup-enable)))
-          (tmux-csi-u--set-auto-enable 'tmux-csi-u-auto-enable nil)
-          (should (equal tty-setup-hook '(user-hook-a user-hook-b))))
+          (setq tty-setup-hook nil)
+          (cl-letf (((symbol-function 'frame-list) (lambda () nil)))
+            (tmux-csi-u-mode -1)
+            (should-not (memq #'tmux-csi-u--tty-setup-enable tty-setup-hook))
+            (tmux-csi-u-mode 1)
+            (should (memq #'tmux-csi-u--tty-setup-enable tty-setup-hook))
+            (should (= (cl-count #'tmux-csi-u--tty-setup-enable tty-setup-hook)
+                       1))
+            (tmux-csi-u-mode -1)
+            (should-not (memq #'tmux-csi-u--tty-setup-enable tty-setup-hook))))
       (setq tty-setup-hook saved-hook)
-      (setq tmux-csi-u-auto-enable saved-value)
-      (tmux-csi-u--sync-tty-setup-hook tmux-csi-u-auto-enable))))
+      (if saved-mode (tmux-csi-u-mode 1) (tmux-csi-u-mode -1)))))
+
+(ert-deftest tmux-csi-u-test-mode-disable-removes-owned-bindings ()
+  (let ((saved-hook tty-setup-hook)
+        (saved-mode tmux-csi-u-mode)
+        (keymap (make-sparse-keymap))
+        (frame 'mode-frame))
+    (unwind-protect
+        (progn
+          (setq tty-setup-hook nil
+                tmux-csi-u--owned-bindings-by-keymap nil)
+          (cl-letf (((symbol-function 'frame-list) (lambda () (list frame)))
+                    ((symbol-function 'tmux-csi-u-supported-p)
+                     (lambda (&optional _frame) t))
+                    ((symbol-function 'tmux-csi-u--support-state)
+                     (lambda (&optional _frame)
+                       '(:support-signal force-enable)))
+                    ((symbol-function 'tmux-csi-u--frame-input-decode-map)
+                     (lambda (_frame) keymap))
+                    ((symbol-function 'tmux-csi-u--warn-on-new-conflicts)
+                     (lambda (&rest _args) nil)))
+            (tmux-csi-u-mode 1)
+            (should (equal (lookup-key keymap "\e[59;2u") [?:]))
+            (let ((owned (gethash keymap
+                                  tmux-csi-u--owned-bindings-by-keymap)))
+              (should (hash-table-p owned))
+              (should (> (hash-table-count owned) 0)))
+            (tmux-csi-u-mode -1)
+            (should (null (lookup-key keymap "\e[59;2u")))
+            (let ((owned (gethash keymap
+                                  tmux-csi-u--owned-bindings-by-keymap)))
+              (should (hash-table-p owned))
+              (should (zerop (hash-table-count owned))))))
+      (setq tty-setup-hook saved-hook)
+      (if saved-mode (tmux-csi-u-mode 1) (tmux-csi-u-mode -1)))))
+
+(ert-deftest tmux-csi-u-test-mode-disable-preserves-external-overwrite ()
+  (let ((saved-hook tty-setup-hook)
+        (saved-mode tmux-csi-u-mode)
+        (keymap (make-sparse-keymap))
+        (frame 'mode-frame)
+        (sequence "\e[59;2u")
+        (external-binding (vector 'f13)))
+    (unwind-protect
+        (progn
+          (setq tty-setup-hook nil
+                tmux-csi-u--owned-bindings-by-keymap nil)
+          (cl-letf (((symbol-function 'frame-list) (lambda () (list frame)))
+                    ((symbol-function 'tmux-csi-u-supported-p)
+                     (lambda (&optional _frame) t))
+                    ((symbol-function 'tmux-csi-u--support-state)
+                     (lambda (&optional _frame)
+                       '(:support-signal force-enable)))
+                    ((symbol-function 'tmux-csi-u--frame-input-decode-map)
+                     (lambda (_frame) keymap))
+                    ((symbol-function 'tmux-csi-u--warn-on-new-conflicts)
+                     (lambda (&rest _args) nil)))
+            (tmux-csi-u-mode 1)
+            (should (equal (lookup-key keymap sequence) [?:]))
+            (define-key keymap sequence external-binding)
+            (should (eq (lookup-key keymap sequence) external-binding))
+            (tmux-csi-u-mode -1)
+            (should (eq (lookup-key keymap sequence) external-binding))))
+      (setq tty-setup-hook saved-hook)
+      (if saved-mode (tmux-csi-u-mode 1) (tmux-csi-u-mode -1)))))
+
+(ert-deftest tmux-csi-u-test-mode-disable-survives-changed-local-overrides ()
+  (let ((saved-hook tty-setup-hook)
+        (saved-mode tmux-csi-u-mode)
+        (saved-overrides tmux-csi-u-local-overrides)
+        (keymap (make-sparse-keymap))
+        (frame 'mode-frame)
+        (sequence "\eFOO"))
+    (unwind-protect
+        (progn
+          (setq tty-setup-hook nil
+                tmux-csi-u--owned-bindings-by-keymap nil
+                tmux-csi-u-local-overrides `((,sequence . [f24])))
+          (cl-letf (((symbol-function 'frame-list) (lambda () (list frame)))
+                    ((symbol-function 'tmux-csi-u-supported-p)
+                     (lambda (&optional _frame) t))
+                    ((symbol-function 'tmux-csi-u--support-state)
+                     (lambda (&optional _frame)
+                       '(:support-signal force-enable)))
+                    ((symbol-function 'tmux-csi-u--frame-input-decode-map)
+                     (lambda (_frame) keymap))
+                    ((symbol-function 'tmux-csi-u--warn-on-new-conflicts)
+                     (lambda (&rest _args) nil)))
+            (tmux-csi-u-mode 1)
+            (should (equal (lookup-key keymap sequence) [f24]))
+            (setq tmux-csi-u-local-overrides nil)
+            (tmux-csi-u-mode -1)
+            (should (null (lookup-key keymap sequence)))))
+      (setq tty-setup-hook saved-hook
+            tmux-csi-u-local-overrides saved-overrides)
+      (if saved-mode (tmux-csi-u-mode 1) (tmux-csi-u-mode -1)))))
+
+(ert-deftest tmux-csi-u-test-mode-disable-survives-changed-force-enable ()
+  (let ((saved-hook tty-setup-hook)
+        (saved-mode tmux-csi-u-mode)
+        (saved-force-enable tmux-csi-u-force-enable)
+        (keymap (make-sparse-keymap))
+        (frame 'mode-frame))
+    (unwind-protect
+        (progn
+          (setq tty-setup-hook nil
+                tmux-csi-u--owned-bindings-by-keymap nil
+                tmux-csi-u-force-enable t)
+          (cl-letf (((symbol-function 'frame-list) (lambda () (list frame)))
+                    ((symbol-function 'display-graphic-p)
+                     (lambda (&optional _frame) nil))
+                    ((symbol-function 'frame-terminal)
+                     (lambda (_frame) 'fake-terminal))
+                    ((symbol-function 'terminal-live-p)
+                     (lambda (_terminal) t))
+                    ((symbol-function 'tty-type)
+                     (lambda (&optional _frame) "xterm-256color"))
+                    ((symbol-function 'tmux-csi-u--frame-input-decode-map)
+                     (lambda (_frame) keymap))
+                    ((symbol-function 'tmux-csi-u--warn-on-new-conflicts)
+                     (lambda (&rest _args) nil)))
+            (tmux-csi-u-mode 1)
+            (should (equal (lookup-key keymap "\e[59;2u") [?:]))
+            (setq tmux-csi-u-force-enable nil)
+            (should-not (tmux-csi-u-supported-p frame))
+            (tmux-csi-u-mode -1)
+            (should (null (lookup-key keymap "\e[59;2u")))
+            (let ((owned (gethash keymap
+                                  tmux-csi-u--owned-bindings-by-keymap)))
+              (should (hash-table-p owned))
+              (should (zerop (hash-table-count owned))))))
+      (setq tty-setup-hook saved-hook
+            tmux-csi-u-force-enable saved-force-enable)
+      (if saved-mode (tmux-csi-u-mode 1) (tmux-csi-u-mode -1)))))
+
+(ert-deftest tmux-csi-u-test-mode-multiple-frames-share-one-terminal ()
+  (let ((saved-hook tty-setup-hook)
+        (saved-mode tmux-csi-u-mode)
+        (shared-keymap (make-sparse-keymap))
+        (frame-a 'frame-a)
+        (frame-b 'frame-b))
+    (unwind-protect
+        (progn
+          (setq tty-setup-hook nil
+                tmux-csi-u--owned-bindings-by-keymap nil)
+          (cl-letf (((symbol-function 'frame-list)
+                     (lambda () (list frame-a frame-b)))
+                    ((symbol-function 'tmux-csi-u-supported-p)
+                     (lambda (&optional _frame) t))
+                    ((symbol-function 'tmux-csi-u--support-state)
+                     (lambda (&optional _frame)
+                       '(:support-signal force-enable)))
+                    ((symbol-function 'frame-terminal)
+                     (lambda (_frame) 'shared-terminal))
+                    ((symbol-function 'tmux-csi-u--frame-input-decode-map)
+                     (lambda (_frame) shared-keymap))
+                    ((symbol-function 'tmux-csi-u--warn-on-new-conflicts)
+                     (lambda (&rest _args) nil)))
+            (tmux-csi-u-mode 1)
+            (should (= (hash-table-count
+                        tmux-csi-u--owned-bindings-by-keymap)
+                       1))
+            (should (equal (lookup-key shared-keymap "\e[59;2u") [?:]))
+            (tmux-csi-u-mode -1)
+            (should (null (lookup-key shared-keymap "\e[59;2u")))
+            (let ((owned (gethash shared-keymap
+                                  tmux-csi-u--owned-bindings-by-keymap)))
+              (should (hash-table-p owned))
+              (should (zerop (hash-table-count owned))))))
+      (setq tty-setup-hook saved-hook)
+      (if saved-mode (tmux-csi-u-mode 1) (tmux-csi-u-mode -1)))))
+
+(ert-deftest tmux-csi-u-test-mode-integer-local-override-round-trip ()
+  (let ((saved-hook tty-setup-hook)
+        (saved-mode tmux-csi-u-mode)
+        (saved-overrides tmux-csi-u-local-overrides)
+        (keymap (make-sparse-keymap))
+        (frame 'mode-frame)
+        (sequence "\eINT"))
+    (unwind-protect
+        (progn
+          (setq tty-setup-hook nil
+                tmux-csi-u--owned-bindings-by-keymap nil
+                tmux-csi-u-local-overrides `((,sequence . ,?\C-a)))
+          (cl-letf (((symbol-function 'frame-list) (lambda () (list frame)))
+                    ((symbol-function 'tmux-csi-u-supported-p)
+                     (lambda (&optional _frame) t))
+                    ((symbol-function 'tmux-csi-u--support-state)
+                     (lambda (&optional _frame)
+                       '(:support-signal force-enable)))
+                    ((symbol-function 'tmux-csi-u--frame-input-decode-map)
+                     (lambda (_frame) keymap))
+                    ((symbol-function 'tmux-csi-u--warn-on-new-conflicts)
+                     (lambda (&rest _args) nil)))
+            (tmux-csi-u-mode 1)
+            (should (eq (lookup-key keymap sequence) ?\C-a))
+            (tmux-csi-u-mode -1)
+            (should (null (lookup-key keymap sequence)))))
+      (setq tty-setup-hook saved-hook
+            tmux-csi-u-local-overrides saved-overrides)
+      (if saved-mode (tmux-csi-u-mode 1) (tmux-csi-u-mode -1)))))
 
 (ert-deftest tmux-csi-u-test-owned-bindings-cache-uses-weak-keys ()
   (let* ((keymap (make-sparse-keymap))
