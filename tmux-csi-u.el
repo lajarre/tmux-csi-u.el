@@ -199,7 +199,14 @@ Return the enable report plist."
 
 (defun tmux-csi-u--uninstall-owned-from-keymap (keymap)
   "Remove package-installed CSI-u entries from KEYMAP.
-Return the number of bindings removed."
+Return the number of bindings removed.
+
+The per-keymap owned-bindings cache is cleared unconditionally
+once the sweep completes, even when no entries were actually
+removed (e.g. every owned slot had been overwritten externally
+since install).  After disable, the package asserts that it owns
+nothing in KEYMAP, so the cache must reflect that regardless of
+the removal outcome."
   (let ((owned-bindings (gethash keymap tmux-csi-u--owned-bindings-by-keymap))
         (removed 0))
     (when (hash-table-p owned-bindings)
